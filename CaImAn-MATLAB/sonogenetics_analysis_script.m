@@ -1,10 +1,10 @@
-clear;
+clear, close all, clc;
 %% load file
 gcp;                            % start cluster
 addpath(genpath('utilities'));
 addpath(genpath('deconvolution'));
   
-nam = '/Users/danieltang/Desktop/Shapiro Lab/Data/Daniel_Hao/US_gel/hsTRPA1_1_stim.tif';          % insert path to tiff stack here
+nam = '/Users/mgs-lab-admin/Desktop/Daniel_Rotation/Data/Daniel_Hao/US_gel/hsTRPA1_1_stim.tif';          % insert path to tiff stack here
 sframe=1;						% user input: first frame to read (optional, default 1)
 num2read=2000;					% user input: how many frames to read   (optional, default until the end)
 Y = read_file(nam,sframe,num2read);
@@ -17,11 +17,17 @@ d = d1*d2;                                          % total number of pixels
 
 %% Set parameters
 
-K = 500;                                           % number of components to be found
-tau = 5;                                          % std of gaussian kernel (half size of neuron) 
-p = 2;
+K = 400; % optimized                              % number of components to be found
+taus = [7];                                          % std of gaussian kernel (half size of neuron) 
+p = 2; % default is 2 
+min_SNR = 3; % optimized/default is 3
+paramName = "tau_screen/";
 
 make_movie = false;
+
+for i = 1:length(taus)
+disp("Running " + num2str(i) + " of " + num2str(length(taus)) + " Trials")
+tau = taus(i);
 
 options = CNMFSetParms(...   
     'd1',d1,'d2',d2,...                         % dimensionality of the FOV
@@ -29,7 +35,7 @@ options = CNMFSetParms(...
     'gSig',tau,...                              % half size of neuron
     'merge_thr',0.80,...                        % merging threshold  
     'nb',2,...                                  % number of background components    
-    'min_SNR',3,...                             % minimum SNR threshold
+    'min_SNR',min_SNR,...                             % minimum SNR threshold
     'space_thresh',0.5,...                      % space correlation threshold
     'cnn_thr',0.2...                            % threshold for CNN classifier    
     );
@@ -132,6 +138,9 @@ K_m = size(C_or,1);
 figure;
 [Coor,json_file] = plot_contours(A_or,Cn,options,1); % contour plot of spatial footprints
 %savejson('jmesh',json_file,'filename');        % optional save json file with component coordinates (requires matlab json library)
+fileDir = "/Users/mgs-lab-admin/Desktop/Daniel_Rotation/Data/Daniel_Hao/US_gel/";
+filename = "Final_ROIs_" + num2str(K) + "-comp_" + num2str(tau) + "-tau_" + num2str(p) + "-p_" + num2str(min_SNR) + "-min_SNR.fig";
+savefig(fileDir + paramName + filename);
 
 %% display components
 
@@ -140,4 +149,6 @@ plot_components_GUI(Yr,A_or,C_or,b2,f2,Cn,options);
 %% make movie
 if make_movie  
     make_patch_video(A_or,C_or,b2,f2,Yr,Coor,options)
+end
+
 end
