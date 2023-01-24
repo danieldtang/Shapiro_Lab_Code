@@ -42,13 +42,13 @@ zscore_image_rfp = zscore(double(image_rfp_scaled));
 %Y = Y - min(Y(:));
 if ~isa(Y,'single');    Y = single(Y);  end         % convert to single
 
-if devMode
-    [d1,d2,~] = size(Y);
-    Y = Y(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
-    image_rfp = image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
-    %     filtered_image_rfp = filtered_image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
-    zscore_image_rfp = zscore_image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
-end
+% if devMode
+%     [d1,d2,~] = size(Y);
+%     Y = Y(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
+%     image_rfp = image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
+%     %     filtered_image_rfp = filtered_image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
+%     zscore_image_rfp = zscore_image_rfp(round(3*d1/8):round(5*d1/8),round(3*d2/8):round(5*d2/8),:);
+% end
 
 figure;
 im1 = image(image_rfp, "CDataMapping","scaled");
