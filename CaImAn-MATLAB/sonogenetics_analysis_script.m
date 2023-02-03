@@ -6,66 +6,57 @@ addpath(genpath('deconvolution'));
 
 devMode = true;
 
-nam = '/Users/danieltang/Desktop/Shapiro Lab/Data/Daniel_Hao/US_gel/hsTRPA1_1_stim.tif';          % insert path to tiff stack here
-rfp_filepath = nam(1:end-8)+"red.tif";
+file_dir = "/Users/mgs-lab-admin/Desktop/Daniel_Rotation/Data/Daniel_Hao/US_agonist/";
+filename = "hsTRPA1_pre500uLGel_AITC11uM_3_agns.tif";          % insert path to tiff stack here
+% rfp_filepath = nam(1:end-8)+"red.tif";
+rfp_filepath = "hsTRPA1_pre500uLGel_AITC11uM_3_red.tif";
+gfp_filepath = "hsTRPA1_pre500uLGel_AITC11uM_3_grn.tif";
 sframe=1;						% user input: first frame to read (optional, default 1)
 num2read=2000;					% user input: how many frames to read   (optional, default until the end)
-Y = read_file(nam,sframe,num2read);
-image_rfp = read_file(rfp_filepath,sframe,num2read);
+
+warning('off','all')
+
+Y = read_file(file_dir+filename,sframe,num2read);
+image_rfp = read_file(file_dir + rfp_filepath,sframe,num2read);
+% image_gfp = read_file(file_dir + gfp_filepath,sframe,num2read);
+
+warning('on','all')
 
 %% Preprocess image
-% image_rfp_scaled = image_rfp - mean(image_rfp, "all");
 
-c = 250;
-kernel = ones(c)/(c^2);
 % Filter the image.  Need to cast to single so it can be floating point
 % which allows the image to have negative values.
+c = 250;
+kernel = ones(c)/(c^2);
 blurred_image_rfp = imfilter(single(image_rfp), kernel,"replicate" );
+% blurred_image_gfp = imfilter(single(image_gfp), kernel,"replicate" );
 
 hp_image_rfp = single(image_rfp) - blurred_image_rfp;
+% hp_image_gfp = single(image_gfp) - blurred_image_gfp;
 
 zscore_image_rfp = zscore(double(hp_image_rfp));
-
-% figure;
-% im = image(image_rfp_scaled, "CDataMapping","scaled");
-
-% rfp_fft = fft2(image_rfp_scaled);
-% % figure;
-% % imagesc(abs(fftshift(rfp_fft)))
-% rfp_fft(1,1) = 0;
-% rec_image_rfp = ifft2(rfp_fft);
-
-% c = 7;
-% kernel = -ones(3)/(c+1);
-% kernel(2,2) = c/(c+1);
-% % Filter the image.  Need to cast to single so it can be floating point
-% % which allows the image to have negative values.
-% % filtered_image_rfp = imfilter(single(image_rfp_scaled), kernel);
-% % filtered_image_rfp = zscore(filtered_image_rfp);
-% % filtered_image_rfp = max(max(filtered_image_rfp)) - filtered_image_rfp;
-% zscore_image_rfp = zscore(double(image_rfp_scaled));
-
-% figure;
-% im2 = image(filtered_rfp_image, "CDataMapping","scaled");
+% zscore_image_gfp = zscore(double(hp_image_gfp));
 
 %Y = Y - min(Y(:)); 
 if ~isa(Y,'single');    Y = single(Y);  end         % convert to single
 
-figure;
-im1 = image(image_rfp, "CDataMapping","scaled");
 % figure;
-% im2 = image(filtered_image_rfp, "CDataMapping","scaled");
+% im1 = image(hp_image_gfp, "CDataMapping","scaled");
+figure;
+im2 = image(zscore_image_rfp, "CDataMapping","scaled");
 
 [d1,d2,T] = size(Y);                                % dimensions of dataset
 d = d1*d2;                                          % total number of pixels
 
 %% Set parameters
 
-K = 50;                                         % number of components to be found
-tau = 3;                                        % std of gaussian kernel (half size of neuron) 
+K = 600;                                         % number of components to be found
+tau = 5;                                        % std of gaussian kernel (half size of neuron) 
 p = 2;
+min_SNR = 1.5;
+merge_thr = 0.97;
 
-rfp_threshold_1 = 0.5;                            % default (0.5) avg fluorescence value within identified ROIs
+rfp_threshold_1 = 2;                            % default (0.5) avg fluorescence value within identified ROIs
 % rfp_threshold_2 = 1.1;                        % default (1-1.2) avg fluorescence value within identified ROIs
 rfp_threshold_2 = 0.1; 
 rfp_thresholds = [rfp_threshold_1, rfp_threshold_2];
@@ -76,11 +67,11 @@ options = CNMFSetParms(...
     'd1',d1,'d2',d2,...                         % dimensionality of the FOV
     'p',p,...                                   % order of AR dynamics    
     'gSig',tau,...                              % half size of neuron
-    'merge_thr',0.80,...                        % merging threshold  
+    'merge_thr',merge_thr,...                        % merging threshold  
     'nb',2,...                                  % number of background components    
-    'min_SNR',3,...                             % minimum SNR threshold
+    'min_SNR',min_SNR,...                       % minimum SNR threshold
     'space_thresh',0.5,...                      % space correlation threshold
-    'cnn_thr',0.2...                            % threshold for CNN classifier    
+    'cnn_thr',0.2...                           % threshold for CNN classifier
     );
 %% Data pre-processing
 
@@ -96,7 +87,6 @@ figure;imagesc(Cn);
     scatter(center(:,2),center(:,1),'mo');
     title('Center of ROIs found from initialization algorithm');
     drawnow;
-
 
     %% manually refine components (optional)
 refine_components = false;  % flag for manual refinement
@@ -179,6 +169,9 @@ K_m = size(C_or,1);
 [C_df,~] = extract_DF_F(Yr,A_or,C_or,P_or,options); % extract DF/F values (optional)
 
 figure;
+[Coor,json_file] = plot_contours(A_or,Cn,options,1); % contour plot of spatial footprints
+
+figure;
 subplot(2,2,1)
 [Coor,json_file] = plot_contours(A_or,Cn,options,1); % contour plot of spatial footprints
 %savejson('jmesh',json_file,'filename');        % optional save json file with component coordinates (requires matlab json library)
@@ -186,17 +179,20 @@ subplot(2,2,1)
 %% identify RFP+/- cells
 [rfp_positive_inds, rfp_negative_inds] = identifyPositiveCells(zscore_image_rfp, Coor, rfp_thresholds);
 
-% TODO: make sure this is plotting what you'd expect
-subplot(2,2,2)
-[~,~] = plot_contours(A_or,zscore_image_rfp,options,1); % contour plot of rfp positive
+if ~isempty(rfp_positive_inds)
+    % TODO: make sure this is plotting what you'd expect
+    subplot(2,2,2)
+    [~,~] = plot_contours(A_or,zscore_image_rfp,options,1); % contour plot of rfp positive
 
-% TODO: make sure this is plotting what you'd expect
-subplot(2,2,3)
-[rfp_Coor,rfp_contours_json_file] = plot_contours(A_or(:,rfp_positive_inds),image_rfp,options,1); % contour plot of rfp positive
+    % TODO: make sure this is plotting what you'd expect
+    subplot(2,2,3)
+    [rfp_Coor,rfp_contours_json_file] = plot_contours(A_or(:,rfp_positive_inds),image_rfp,options,1); % contour plot of rfp positive
 
-subplot(2,2,4)
-[rfp_neg_Coor,rfp_neg_contours_json_file] = plot_contours(A_or(:,rfp_negative_inds),image_rfp,options,1); % contour plot of rfp positive
-
+    subplot(2,2,4)
+    [rfp_neg_Coor,rfp_neg_contours_json_file] = plot_contours(A_or(:,rfp_negative_inds),image_rfp,options,1); % contour plot of rfp positive
+else
+    print("No RFP+ cells found. Double check parameters")
+end
 %% display componentsplot_components_GUI(Yr,A_or,C_or,b2,f2,Cn,options);
 
 %% make movie

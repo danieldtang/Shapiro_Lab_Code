@@ -10,7 +10,7 @@ function [positiveCellInds, negativeCellInds] = identifyPositiveCells(image, ROI
         img_mask = imfill(img_mask, 'holes');
         if quantile(nonzeros(double(image).*img_mask), 0.75) > thresholds(1)
             positiveCellInds = [positiveCellInds; i];
-        elseif quantile(nonzeros(double(image).*img_mask), 0.75) < thresholds(2) 
+        elseif quantile(nonzeros(double(image).*img_mask), 0.9) < thresholds(2) 
             negativeCellInds = [negativeCellInds; i];
         end
     end

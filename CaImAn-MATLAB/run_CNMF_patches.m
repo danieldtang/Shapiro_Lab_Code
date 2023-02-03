@@ -1,4 +1,4 @@
-function [A,b,C,f,S,P,RESULTS,YrA] = run_CNMF_patches(data,K,patches,tau,p,options)
+function [A,b,C,f,S,P,RESULTS,YrA, F_dark] = run_CNMF_patches(data,K,patches,tau,p,options)
 % RUN_CNMF_PATCHES - apply CNMF algorithm on overlapping patches in parallel
 %
 %   [A,b,C,f,S,P,RESULTS,YrA] = run_CNMF_patches(data,K,patches,tau,p,options)
